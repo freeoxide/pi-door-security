@@ -6,8 +6,14 @@ Architecture:
 
 - rust client (run on the pi)
  - responsible for triggering alarm, arm/disarm, and sending notifications.
+ - run with systemd.
+ - never killable.
+ - ability to use two networks (wifi and ethernet) for redundancy.
+
 - Axum master server (runs on a vps)
  - responsible to syncing the client server with the app
+ - deploy via docker
+ - postgres database.
 - Flutter mobile app
  - Responsible for arm/disarm.
 - Dioxus web app (dashboard)

@@ -1,6 +1,108 @@
 [package]
-name = "client"
+name = "pi-door-client"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Pi Door Security Team"]
+description = "Client agent for Pi Door Security system"
+license = "MIT"
+
+[[bin]]
+name = "pi-door-client"
+path = "src/main.rs"
+
+[lib]
+name = "pi_door_client"
+path = "src/lib.rs"
 
 [dependencies]
+# Async runtime
+tokio = { version = "1.45", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# HTTP/WebSocket server
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace", "timeout", "cors"] }
+hyper = { version = "1.5", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Configuration management
+config = { version = "0.14", features = ["toml"] }
+
+# WebSocket client for cloud
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+native-tls = "0.2"
+
+# Event persistence
+sled = "0.34"
+
+# GPIO (conditional)
+rppal = { version = "0.19", optional = true }
+
+# BLE (optional for now)
+# bluer = { version = "0.17", features = ["bluetoothd"], optional = true }
+
+# JWT authentication
+jsonwebtoken = "9.3"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "fmt"] }
+# tracing-journald = { version = "0.3", optional = true }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# UUID generation
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Metrics (optional)
+prometheus = { version = "0.13", optional = true }
+
+# Systemd integration
+sd-notify = { version = "0.4", optional = true }
+
+# Utilities
+once_cell = "1.20"
+parking_lot = "0.12"
+
+# Unix-specific dependencies
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["user"] }
+signal-hook = "0.3"
+signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+mockall = "0.13"
+tempfile = "3.13"
+tokio-test = "0.4"
+
+[features]
+default = ["mock-gpio"]
+mock-gpio = []
+real-gpio = ["rppal"]
+# ble = ["bluer"]
+metrics = ["prometheus"]
+# journald = ["tracing-journald"]
+systemd = ["sd-notify"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

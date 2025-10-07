@@ -3,10 +3,12 @@
 mod status;
 mod arm_disarm;
 mod actuators;
+mod websocket;
 
 pub use status::get_status;
 pub use arm_disarm::{arm, disarm};
 pub use actuators::{control_siren, control_floodlight};
+pub use websocket::websocket_handler;
 
 use axum::{extract::State, Json};
 use serde_json::{json, Value};

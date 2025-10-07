@@ -29,6 +29,8 @@ pub fn create_router(state: AppState, event_bus: EventBus) -> Router {
         // Actuator control
         .route("/v1/siren", post(handlers::control_siren))
         .route("/v1/floodlight", post(handlers::control_floodlight))
+        // WebSocket for real-time events
+        .route("/v1/ws", get(handlers::websocket_handler))
         .with_state(ctx)
 }
 

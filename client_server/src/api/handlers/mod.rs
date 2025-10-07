@@ -1,5 +1,13 @@
 //! API request handlers
 
+mod status;
+mod arm_disarm;
+mod actuators;
+
+pub use status::get_status;
+pub use arm_disarm::{arm, disarm};
+pub use actuators::{control_siren, control_floodlight};
+
 use axum::{extract::State, Json};
 use serde_json::{json, Value};
 use std::sync::Arc;

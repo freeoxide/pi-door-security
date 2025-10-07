@@ -5,5 +5,5 @@ mod transitions;
 mod shared;
 
 pub use machine::StateMachine;
-pub use shared::{AlarmState, SharedState, ActuatorState, ConnectivityState, AppState, new_app_state};
+pub use shared::{AlarmState, SharedState, ActuatorState, ConnectivityState, CloudStatus, AppState, new_app_state};
 pub use transitions::StateTransition;

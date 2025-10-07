@@ -1,4 +1,7 @@
 //! Security utilities module
-//! TODO: Implement secret management and privilege dropping
+
+mod privileges;
+
+pub use privileges::drop_privileges;
 
 pub struct SecretStore;

@@ -1,0 +1,55 @@
+[system]
+client_id = "pi001"
+data_dir = "/var/lib/pi-door-client"
+log_level = "info"
+
+[network]
+prefer = ["eth0", "wlan0"]
+enable_lte = false
+
+[http]
+listen_addr = "0.0.0.0:8080"
+
+[ws_local]
+enabled = true
+
+[cloud]
+url = "wss://api.example.com/client"
+spki_pins = []
+heartbeat_s = 20
+backoff_min_s = 1
+backoff_max_s = 60
+queue_max_events = 10000
+queue_max_age_days = 7
+
+[gpio]
+reed_in = 17
+reed_active_low = true
+siren_out = 27
+floodlight_out = 22
+radio433_rx_in = 23
+debounce_ms = 50
+
+[timers]
+exit_delay_s = 30
+entry_delay_s = 30
+auto_rearm_s = 120
+siren_max_s = 120
+
+[ble]
+enabled = true
+pairing_window_s = 120
+
+[rf433]
+enabled = true
+allow_disarm = false
+debounce_ms = 500
+
+[[rf433.mappings]]
+code = "0xA1B2C3"
+action = "arm"
+
+[[rf433.mappings]]
+code = "0xA1B2C4"
+action = "floodlight"
+args = { on = true, duration_s = 600 }

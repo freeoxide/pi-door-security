@@ -1,10 +1,21 @@
 //! Health monitoring and systemd watchdog integration
-//! TODO: Implement systemd watchdog integration
 
-pub struct HealthMonitor;
+mod watchdog;
+
+pub use watchdog::WatchdogManager;
+
+pub struct HealthMonitor {
+    watchdog: WatchdogManager,
+}
 
 impl HealthMonitor {
     pub fn new() -> Self {
-        Self
+        Self {
+            watchdog: WatchdogManager::new(),
+        }
+    }
+
+    pub fn watchdog(&self) -> &WatchdogManager {
+        &self.watchdog
     }
 }

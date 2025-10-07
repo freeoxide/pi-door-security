@@ -1,0 +1,43 @@
+[Unit]
+Description=Pi Door Security Client Agent
+Documentation=https://github.com/yourusername/pi-door-security
+After=network-online.target time-sync.target
+Wants=network-online.target
+Requires=time-sync.target
+
+[Service]
+Type=notify
+User=pi-client
+Group=pi-client
+ExecStart=/usr/local/bin/pi-door-client --config /etc/pi-door-client/config.toml
+EnvironmentFile=-/etc/pi-door-client/secret.env
+Restart=always
+RestartSec=2s
+WatchdogSec=30s
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/
+ReadWritePaths=/var/lib/pi-door-client
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_BLUETOOTH
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+PrivateMounts=true
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

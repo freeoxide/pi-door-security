@@ -1,10 +1,9 @@
 //! Cloud WebSocket client module
-//! TODO: Implement full cloud WebSocket client with TLS 1.3 and JWT auth
 
-pub struct CloudClient;
+mod client;
+mod reconnect;
+mod queue_manager;
 
-impl CloudClient {
-    pub fn new() -> Self {
-        Self
-    }
-}
+pub use client::CloudClient;
+pub use reconnect::ReconnectManager;
+pub use queue_manager::QueueManager;

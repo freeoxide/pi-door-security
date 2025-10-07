@@ -99,7 +99,6 @@ impl EventQueue {
 
     /// Prune old events based on max_events and max_age
     fn prune(&self) -> Result<()> {
-        let current_len = self.len()?;
         let cutoff_time = Utc::now() - self.max_age;
 
         // Prune by age

@@ -127,7 +127,8 @@ async fn handle_socket(socket: WebSocket, ctx: Arc<ApiContext>) {
                     // Parse command
                     let ws_msg: Result<WsMessage, _> = serde_json::from_str(&text);
                     match ws_msg {
-                        Ok(WsMessage::Cmd { name, args, id }) => {
+                        Ok(WsMessage::Cmd { name, args, id: _id }) => {
+                            // Note: Command acknowledgments with id could be implemented here
                             if let Err(e) = handle_command(&name, args, &event_bus) {
                                 warn!(command = %name, error = %e, "Failed to handle command");
                             }

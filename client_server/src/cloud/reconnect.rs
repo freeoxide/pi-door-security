@@ -8,6 +8,7 @@ pub struct ReconnectManager {
     min_backoff: Duration,
     max_backoff: Duration,
     current_backoff: Duration,
+    #[allow(dead_code)] // Reserved for future stable connection detection
     stable_connection_threshold: Duration,
 }
 

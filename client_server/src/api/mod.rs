@@ -11,7 +11,7 @@ use crate::events::EventBus;
 use crate::state::AppState;
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use std::sync::Arc;
 
@@ -29,6 +29,11 @@ pub fn create_router(state: AppState, event_bus: EventBus) -> Router {
         // Actuator control
         .route("/v1/siren", post(handlers::control_siren))
         .route("/v1/floodlight", post(handlers::control_floodlight))
+        // Configuration management
+        .route("/v1/config", get(handlers::get_config))
+        .route("/v1/config", put(handlers::update_config))
+        // BLE pairing
+        .route("/v1/ble/pairing", post(handlers::ble_pairing))
         // WebSocket for real-time events
         .route("/v1/ws", get(handlers::websocket_handler))
         .with_state(ctx)

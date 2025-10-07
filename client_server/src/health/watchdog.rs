@@ -2,7 +2,6 @@
 
 use std::time::Duration;
 use tokio::time::interval;
-use tracing::{debug, info};
 
 pub struct WatchdogManager {
     #[cfg(feature = "systemd")]

@@ -1,7 +1,7 @@
 //! Privilege dropping after socket binding
 
 use anyhow::{Context, Result};
-use tracing::{info, warn};
+use tracing::info;
 
 /// Drop privileges to specified user
 #[cfg(unix)]

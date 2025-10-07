@@ -70,6 +70,7 @@ pub fn next_state(current: AlarmState, event: &Event) -> Option<AlarmState> {
 }
 
 /// Determine actuator state based on alarm state
+#[allow(dead_code)] // Public API, tested but not yet used in main flow
 pub fn actuator_state_for(alarm_state: AlarmState, in_alarm: bool) -> ActuatorState {
     match alarm_state {
         AlarmState::Alarm => ActuatorState {
@@ -84,6 +85,7 @@ pub fn actuator_state_for(alarm_state: AlarmState, in_alarm: bool) -> ActuatorSt
 }
 
 /// Check if a transition is valid
+#[allow(dead_code)] // Public API, tested but not yet used in main flow
 pub fn is_valid_transition(from: AlarmState, to: AlarmState, event: &Event) -> bool {
     next_state(from, event) == Some(to)
 }

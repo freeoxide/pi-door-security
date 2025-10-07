@@ -1,11 +1,10 @@
 //! State machine implementation
 
-use super::{AlarmState, AppState, ActuatorState, StateTransition};
-use super::transitions::{next_state, actuator_state_for};
+use super::{AlarmState, AppState, ActuatorState};
+use super::transitions::next_state;
 use crate::config::TimerConfig;
 use crate::events::{Event, EventBus, EventEnvelope, TimerId};
 use anyhow::Result;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 

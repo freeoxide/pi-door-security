@@ -3,7 +3,7 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::api::{ApiContext, ApiError};
 use crate::events::{Event, EventSource};

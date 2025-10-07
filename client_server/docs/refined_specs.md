@@ -136,9 +136,9 @@ Transition rules
 
 8. Local HTTP REST API
 - Base path: /v1
-- Transport: HTTP over TCP on configurable port (default 8080), listen on LAN by default, optional listen only on loopback.
-- Auth: X-API-Key header; requests from IPs not in lan_allowlist are rejected before auth unless allow_all_lan is true.
-- Rate limits: 10 requests per second per client IP burst 20; 64 KB max body.
+- Transport: HTTP over TCP on configurable port (default 8080); bind 0.0.0.0 by default for simplicity.
+- Auth: none in MVP; endpoints are open on LAN; CORS disabled by default.
+- Framework: Axum minimal router and handlers; no custom middleware layers; straightforward JSON request/response.
 
 Endpoints
 - GET /v1/health
@@ -165,11 +165,10 @@ Endpoints
 
 9. Local WebSocket realtime
 - Endpoint: /v1/ws
-- Subprotocols
-  - apikey: pass API key via Sec-WebSocket-Protocol header as apikey,<key>
-  - bearer: pass JWT via Authorization header with Bearer scheme
+- Auth: none in MVP.
 - Heartbeat: ping every 30 s; disconnect if no pong after 2 intervals.
 - Messages: JSON lines, one object per frame.
+- Implementation: Axum WebSocket upgrade with basic ping/pong; no rate limiting or connection caps.
 
 Event messages examples
 - {"type":"event","name":"door","value":"open","ts":"2025-01-01T12:00:00Z"}
@@ -183,7 +182,7 @@ Command messages examples
 
 Replies
 - {"type":"ack","id":"c1","ok":true}
-- {"type":"ack","id":"c3","ok":false,"error":"rate_limited"}
+- {"type":"ack","id":"c3","ok":false,"error":"invalid_cmd"}
 
 10. Cloud WebSocket protocol
 - Transport: wss to configured cloud url; TLS 1.3; server cert validated against system trust store with optional SPKI pin.
@@ -205,7 +204,6 @@ Cloud commands example
 
 11. BLE GATT service
 - Pairing and security: LE Secure Connections with numeric passkey; MITM required; bonding required; reject legacy pairing.
-- Rate limiting: one command per second; burst three per five seconds.
 - Service and characteristics
   - Service UUID: 7e1a0001-6c69-656e-7473-706563000000 (example namespace for this project)
   - Command characteristic UUID: 7e1a0002-6c69-656e-7473-706563000000; write without response; payload utf8 json, max 128 bytes
@@ -234,7 +232,7 @@ Cloud commands example
   - /etc/pi-door-client/config.toml
   - Environment variables override selected keys
 - Secrets
-  - API key and JWT stored in /etc/pi-door-client/secret.env owned by root mode 600
+  - JWT stored in /etc/pi-door-client/secret.env owned by root mode 600
 
 Example config toml
 ```toml
@@ -249,9 +247,6 @@ enable_lte = false
 
 [http]
 listen_addr = "0.0.0.0:8080"
-lan_allowlist = ["127.0.0.1/32", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
-require_api_key = true
-rate_limit_rps = 10
 
 [ws_local]
 enabled = true
@@ -282,7 +277,6 @@ siren_max_s = 120
 [ble]
 enabled = true
 pairing_window_s = 120
-rate_limit_rps = 1
 
 [rf433]
 enabled = true
@@ -295,7 +289,6 @@ mappings = [
 ```
 
 Environment variables
-- PI_CLIENT_API_KEY for local API
 - PI_CLIENT_JWT for cloud bearer
 - PI_CLIENT_CONFIG to override config path
 
@@ -375,7 +368,6 @@ Example log line
   - Internet flap test: while generating events, disconnect for 10 minutes then reconnect; 100 percent of events delivered in order.
   - Process kill test: kill minus nine; on restart fail-safe outputs off; state restored from persisted snapshot or defaults; no duplicate alarms.
 - Security
-  - Local API rejects requests without valid API key and outside allowlist.
   - Cloud connects only with TLS 1.3 and valid cert; JWT expiry enforced.
 
 19. Out of scope and future work
@@ -398,8 +390,41 @@ C. Security hardening references
 
 --------------------------------------------------------------------------------
 
+21. Implementation stack for local server (Axum)
+- Language and runtime
+  - Rust edition 2024
+  - Async runtime: Tokio multi-thread
+- HTTP and WebSocket server
+  - Framework: Axum for routing, request extraction, and WebSocket handling
+  - HTTP versions: support HTTP/1.1; HTTP/2 optional if TLS termination is provided upstream
+  - Bind address: from config http.listen_addr; can restrict to loopback for hardened deployments
+- Middleware and layers
+  - None for MVP; use Axum extractors only and a simple error handler; CORS disabled by default
+- Routing layout
+  - GET /v1/health
+  - GET /v1/status
+  - POST /v1/arm
+  - POST /v1/disarm
+  - POST /v1/siren
+  - POST /v1/floodlight
+  - GET /v1/config
+  - PUT /v1/config
+  - POST /v1/ble/pairing
+  - GET /v1/ws
+- Error model
+  - Errors return JSON: {"error":"string","code":integer}
+  - Use 4xx for client errors and 5xx for server faults; include retryable:true when safe to retry
+- Graceful startup and shutdown
+  - On startup, initialize GPIO to safe state, open event queue, then start server
+  - On SIGTERM, stop accepting new connections, drain in-flight requests for up to 5 s, then shut down
+- Observability
+  - Emit structured logs per request with method, path, status, latency_ms, remote_ip, user_agent, request_id
+  - Optionally expose Prometheus metrics on localhost only at /metrics
+- Security hardening
+  - Drop privileges to service user after binding; sanitize headers; filter hop-by-hop headers
+
 Assumptions and open items
 - BLE UUIDs are provisional and can be replaced with final namespace before implementation.
-- LAN allowlist defaults can be tightened to localhost only for high security deployments.
+- Local authentication and allowlisting are out of scope for MVP and may be added later if needed.
 - Radio remote disarm remains disabled by default and requires explicit enable with risk acceptance.
 

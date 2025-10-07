@@ -5,6 +5,7 @@ use pi_door_client::{
     config,
     events::EventBus,
     gpio::{DefaultGpio, GpioController},
+    network::NetworkManager,
     observability,
     state::{new_app_state, StateMachine},
     api,
@@ -59,6 +60,15 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         info!("State machine event loop terminated");
+    });
+
+    // Initialize network manager
+    let mut network_manager = NetworkManager::new(config.network.prefer.clone());
+    info!("Network manager initialized");
+
+    // Spawn network monitoring task
+    tokio::spawn(async move {
+        network_manager.start_monitoring().await;
     });
 
     // Create HTTP API router

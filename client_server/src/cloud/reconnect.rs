@@ -30,14 +30,16 @@ impl ReconnectManager {
         );
         sleep(self.current_backoff).await;
         
-        // Double the backoff with full jitter
+        // Double the backoff
         let next = self.current_backoff * 2;
-        self.current_backoff = next.min(self.max_backoff);
         
-        // Add jitter (0-50% of backoff)
-        let jitter = self.current_backoff / 4;
+        // Add jitter (0-50% of backoff) before capping
+        let jitter = next / 4;
         let jitter_amount = (rand::random::<f64>() * jitter.as_secs_f64()) as u64;
-        self.current_backoff += Duration::from_secs(jitter_amount);
+        let with_jitter = next + Duration::from_secs(jitter_amount);
+        
+        // Cap at max backoff
+        self.current_backoff = with_jitter.min(self.max_backoff);
         
         debug!(next_backoff_s = self.current_backoff.as_secs(), "Next backoff calculated");
     }
@@ -77,12 +79,19 @@ mod tests {
 
     #[test]
     fn test_backoff_caps_at_max() {
-        let mut mgr = ReconnectManager::new(30, 60);
+        // Use millisecond values for fast testing
+        let min_ms = 10;
+        let max_ms = 50;
+        let mut mgr = ReconnectManager::new(0, 0);
+        mgr.min_backoff = Duration::from_millis(min_ms);
+        mgr.max_backoff = Duration::from_millis(max_ms);
+        mgr.current_backoff = Duration::from_millis(min_ms);
         
-        // Should cap at max
+        // Should cap at max after multiple backoffs
         tokio_test::block_on(mgr.backoff());
         tokio_test::block_on(mgr.backoff());
-        assert!(mgr.current().as_secs() <= 60);
+        tokio_test::block_on(mgr.backoff());
+        assert!(mgr.current().as_millis() <= max_ms as u128);
     }
 
     #[test]

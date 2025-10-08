@@ -1,8 +1,49 @@
 [package]
 name = "master_server"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-axum = "0.8.6"
+# Web framework
+axum = { version = "0.8.6", features = ["macros"] }
 tokio = { version = "1.47.1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "cors"] }
+
+# Database
+sea-orm = { version = "1.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+sea-orm-migration = "1.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Auth & Crypto
+argon2 = "0.5"
+jsonwebtoken = "9"
+totp-lite = "2"
+rand = "0.8"
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Config & Logging
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+[dependencies.migration]
+path = "./migration"
+
+[[bin]]
+name = "master_server"
+path = "src/main.rs"
+
+[[bin]]
+name = "masterctl"
+path = "src/cli/main.rs"

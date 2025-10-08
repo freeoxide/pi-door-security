@@ -7,7 +7,7 @@ Goal: deliver a minimal‑config, production‑leaning MVP that “just works”
 - Master server for managing and monitoring client servers (e.g., Pi door devices).
 - Store users, clients, assignments, events/logs, commands, and uptime in Postgres via SeaORM.
 - Provide REST API for admin operations, logs, configs, and command dispatch to clients.
-- Support client registration with a pre‑provisioned key (UUIDv7) and submitting local IP:port for `eth0` and `wlan0`.
+- Support client registration with a pre‑provisioned key (UUIDv7) and submitting local IPs for `eth0` and `wlan0` plus a shared service port.
 - Basic roles: `admin`, `user`.
 - Auth: username + password plus optional TOTP (authenticator app). Long‑expiry session tokens.
 
@@ -56,9 +56,8 @@ Use singular entity names; indices as noted.
   - `label` (text)
   - `provision_key` (uuidv7, unique) — used once during initial registration
   - `eth0_ip` (inet, nullable)
-  - `eth0_port` (int, nullable)
   - `wlan0_ip` (inet, nullable)
-  - `wlan0_port` (int, nullable)
+  - `service_port` (int, nullable) — same port reported for both interfaces
   - `status` (enum: `unknown` | `online` | `offline`, index)
   - `last_seen_at` (timestamptz, nullable)
   - `created_at` (timestamptz, default now)
@@ -138,12 +137,13 @@ Clients
 - `POST /clients` (admin) { label } → { id, provision_key }
 - `GET /clients` (auth) → [client] (admins see all; users see assigned)
 - `GET /clients/{id}` (auth) → client (must be assigned or admin)
+- `PATCH /clients/{id}/network` (auth) { eth0_ip?, wlan0_ip?, service_port? } → client (admins any client; users limited to assignments; clients may call with client token)
 - `DELETE /clients/{id}` (admin) → 204
 - `POST /clients/{id}/assign` (admin) { user_id } → 204
 - `DELETE /clients/{id}/assign/{user_id}` (admin) → 204
 
 Client Registration & Telemetry (client → master)
-- `POST /clients/register` { provision_key, eth0_ip?, eth0_port?, wlan0_ip?, wlan0_port? }
+- `POST /clients/register` { provision_key, eth0_ip?, wlan0_ip?, service_port? }
   → { client_id, api_token } (one‑time; invalidates `provision_key` and issues a client API token)
 - `POST /clients/{id}/heartbeat` (client auth) { uptime_ms? } → 204
 - `POST /clients/{id}/events` (client auth) { level, kind, message, meta? } → 202
@@ -155,7 +155,7 @@ Commands
 
 Logs & Status
 - `GET /clients/{id}/events?since=...&level=...` (auth) → [event]
-- `GET /clients/{id}/status` (auth) → { status, last_seen_at, eth0, wlan0 }
+- `GET /clients/{id}/status` (auth) → { status, last_seen_at, service_port, eth0, wlan0 }
 
 Configs (MVP minimal)
 - `GET /clients/{id}/config` (auth) → { ... }
@@ -169,7 +169,11 @@ Notes:
 
 Registration
 - Admin creates client: server returns `provision_key` (uuidv7).
-- Client starts with `provision_key` and POSTs network info. Master returns `client_id` and a `client_api_token` (opaque) used for subsequent client calls.
+- Client starts with `provision_key` and POSTs network info (IPs and shared service port). Master returns `client_id` and a `client_api_token` (opaque) used for subsequent client calls.
+
+IP Updates
+- Clients call `PATCH /clients/{id}/network` with refreshed IP data whenever addresses change (e.g., DHCP churn). Endpoint accepts client tokens and updates master records.
+- Admins/users with access can also patch network info manually if on-site adjustments occur.
 
 Heartbeat & Status
 - Client sends `POST /clients/{id}/heartbeat` every 30 seconds with optional `uptime_ms`.
@@ -210,4 +214,3 @@ Command Delivery (simple & robust)
 
 - Use SeaORM migrations for schemas and enums.
 - Optional seed command to create demo users/clients in non‑prod.
-

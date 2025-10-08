@@ -24,6 +24,9 @@ jsonwebtoken = "9"
 totp-lite = "2"
 rand = "0.8"
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
+hex = "0.4"
+data-encoding = "2"
+urlencoding = "2"
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

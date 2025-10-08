@@ -1,7 +1,9 @@
 mod app;
+mod auth;
 mod config;
 mod db;
 mod entities;
+mod handlers;
 
 use anyhow::Result;
 use std::sync::Arc;

@@ -82,9 +82,6 @@ impl NetworkManager {
 
     /// Get list of available interfaces
     async fn get_available_interfaces(&self) -> Vec<NetworkInterface> {
-        // In a real implementation, this would use system calls to check interface status
-        // For now, simulate interface detection
-        
         let mut interfaces = Vec::new();
         
         for (priority, name) in self.preferred_interfaces.iter().enumerate() {
@@ -105,13 +102,36 @@ impl NetworkManager {
 
     /// Check the status of a specific interface
     async fn check_interface_status(&self, name: &str) -> NetworkInterface {
-        // In production, this would read from /sys/class/net/{interface}/
-        // For now, simulate eth0 as always available
+        // Read interface status from /sys/class/net/
+        let operstate_path = format!("/sys/class/net/{}/operstate", name);
+        let carrier_path = format!("/sys/class/net/{}/carrier", name);
+        
+        let is_up = tokio::fs::read_to_string(&operstate_path)
+            .await
+            .map(|s| s.trim() == "up")
+            .unwrap_or(false);
+        
+        let has_carrier = tokio::fs::read_to_string(&carrier_path)
+            .await
+            .map(|s| s.trim() == "1")
+            .unwrap_or(false);
+        
+        if is_up && has_carrier {
+            debug!(interface = name, "Interface available");
+        } else {
+            debug!(
+                interface = name,
+                is_up,
+                has_carrier,
+                "Interface unavailable"
+            );
+        }
+        
         NetworkInterface {
             name: name.to_string(),
             priority: 0,
-            is_up: name == "eth0", // Simulate eth0 as available
-            has_carrier: name == "eth0",
+            is_up,
+            has_carrier,
         }
     }
 

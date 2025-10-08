@@ -1,7 +1,7 @@
 //! Security utilities module
 
 mod privileges;
+mod secrets;
 
 pub use privileges::drop_privileges;
-
-pub struct SecretStore;
+pub use secrets::SecretStore;

@@ -76,11 +76,14 @@ async fn create_command(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -94,13 +97,17 @@ async fn create_command(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    }),
-                )
-            })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
         if assignment.is_none() {
             return Err((
                 StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "Access denied".to_string(),
                 }),
             ));
         }
@@ -122,9 +129,11 @@ async fn create_command(
     let command = command.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok((StatusCode::CREATED, Json(command.into())))
 }
@@ -145,6 +154,8 @@ async fn list_commands(
             _ => {
                 return Err((
                     StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: "Invalid status".to_string(),
                     }),
                 ))
             }
@@ -155,9 +166,11 @@ async fn list_commands(
     let commands = q.all(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(Json(commands.into_iter().map(|c| c.into()).collect()))
 }
@@ -174,11 +187,14 @@ async fn ack_command(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -194,9 +210,11 @@ async fn ack_command(
     command.update(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

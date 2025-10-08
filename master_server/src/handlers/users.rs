@@ -1,6 +1,8 @@
 use axum::{
+    extract::{Path, State},
     http::StatusCode,
     middleware,
+    routing::{delete, get, patch, post, Router},
     Extension, Json,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
@@ -9,6 +11,8 @@ use uuid::Uuid;
 
 use crate::{
     app::AppState,
+    auth::{self, middleware::AuthUser},
+    entities::{prelude::*, users},
 };
 
 #[derive(Debug, Deserialize)]
@@ -46,6 +50,7 @@ impl From<users::Model> for UserResponse {
             username: user.username,
             role: user.role,
             otp_enabled: user.otp_enabled,
+            created_at: user.created_at.to_rfc3339(),
         }
     }
 }
@@ -189,5 +194,5 @@ pub fn router() -> Router<AppState> {
         .route("/", get(list_users))
         .route("/:id", patch(update_user))
         .route("/:id", delete(delete_user))
-        .route_layer(middleware::from_fn(crate::auth::middleware::require_admin));
+        
 }

@@ -83,11 +83,14 @@ async fn heartbeat(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -98,9 +101,11 @@ async fn heartbeat(
     client.update(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     // Record heartbeat
     let heartbeat = heartbeats::ActiveModel {
@@ -113,9 +118,11 @@ async fn heartbeat(
     heartbeat.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -138,9 +145,11 @@ async fn create_event(
     event.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::ACCEPTED)
 }
@@ -161,15 +170,18 @@ async fn list_events(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    }),
-                )
-            })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
         if assignment.is_none() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                }),
-            ));
+            return Err((StatusCode::FORBIDDEN,
+                    Json(ErrorResponse {
+                        error: "Error".to_string(),
+                    }),
+                ));
         }
     }
 
@@ -189,8 +201,9 @@ async fn list_events(
             "warn" => events::EventLevel::Warn,
             "error" => events::EventLevel::Error,
             _ => {
-                return Err((
-                    StatusCode::BAD_REQUEST,
+                return Err((StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: "Error".to_string(),
                     }),
                 ))
             }
@@ -205,9 +218,11 @@ async fn list_events(
     let events = q.all(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(Json(events.into_iter().map(|e| e.into()).collect()))
 }
@@ -227,15 +242,18 @@ async fn get_status(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    }),
-                )
-            })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
         if assignment.is_none() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                }),
-            ));
+            return Err((StatusCode::FORBIDDEN,
+                    Json(ErrorResponse {
+                        error: "Error".to_string(),
+                    }),
+                ));
         }
     }
 
@@ -245,11 +263,14 @@ async fn get_status(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 

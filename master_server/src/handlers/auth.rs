@@ -252,13 +252,9 @@ async fn otp_verify(
 }
 
 pub fn router() -> Router<AppState> {
-    let protected = Router::new()
+    Router::new()
+        .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/otp/setup", post(otp_setup))
         .route("/otp/verify", post(otp_verify))
-        .route_layer(middleware::from_fn(crate::auth::middleware::require_auth));
-
-    Router::new()
-        .route("/login", post(login))
-        .merge(protected)
 }

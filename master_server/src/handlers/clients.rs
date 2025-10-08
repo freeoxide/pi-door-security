@@ -104,6 +104,8 @@ async fn create_client(
     client.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to create client".to_string(),
             }),
         )
     })?;
@@ -126,6 +128,8 @@ async fn list_clients(
         Clients::find().all(&state.db).await.map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
                 }),
             )
         })?
@@ -138,6 +142,8 @@ async fn list_clients(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Database error".to_string(),
                     }),
                 )
             })?;
@@ -151,6 +157,8 @@ async fn list_clients(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Database error".to_string(),
                     }),
                 )
             })?
@@ -170,11 +178,14 @@ async fn get_client(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -188,13 +199,17 @@ async fn get_client(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    }),
-                )
-            })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
         if assignment.is_none() {
             return Err((
                 StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "Access denied".to_string(),
                 }),
             ));
         }
@@ -215,11 +230,14 @@ async fn update_network(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -233,13 +251,17 @@ async fn update_network(
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    }),
-                )
-            })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
         if assignment.is_none() {
             return Err((
                 StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "Access denied".to_string(),
                 }),
             ));
         }
@@ -262,9 +284,11 @@ async fn update_network(
     let client = client.update(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(Json(client.into()))
 }
@@ -280,11 +304,14 @@ async fn delete_client(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -292,9 +319,11 @@ async fn delete_client(
     client.delete(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -312,11 +341,14 @@ async fn assign_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -327,11 +359,14 @@ async fn assign_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -344,9 +379,11 @@ async fn assign_user(
     assignment.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -364,11 +401,14 @@ async fn unassign_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -376,9 +416,11 @@ async fn unassign_user(
     assignment.delete(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -395,11 +437,14 @@ async fn register_client(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
                 }),
             )
         })?
-        .ok_or((
-            StatusCode::NOT_FOUND,
+        .ok_or((StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Error".to_string(),
             }),
         ))?;
 
@@ -413,9 +458,11 @@ async fn register_client(
     let client = client.update(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            }),
-        )
-    })?;
+                Json(ErrorResponse {
+                    error: "Error".to_string(),
+                }),
+            )
+        })?;
 
     // Generate client API token (using session system with special user ID)
     let token = hex::encode(rand::random::<[u8; 32]>());

@@ -1,18 +1,18 @@
 //! Pi Door Security Client Agent
 //! Main entry point
 
+use anyhow::anyhow;
 use pi_door_client::{
-    config,
+    api, config,
     events::EventBus,
     gpio::{DefaultGpio, GpioController},
     network::NetworkManager,
     observability,
     state::{new_app_state, StateMachine},
-    api,
 };
-use std::sync::Arc;
+use std::{env, process, sync::Arc};
 use tokio::signal;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,8 +20,22 @@ async fn main() -> anyhow::Result<()> {
     observability::init_logging()?;
     info!("Pi Door Security Client Agent v{}", pi_door_client::VERSION);
 
+    // Parse CLI arguments
+    let cli = CliArgs::parse()?;
+
     // Load configuration
-    let config = config::load_config()?;
+    let mut config = config::load_config()?;
+
+    // Apply CLI-provided API key if present
+    if let Some(api_key) = cli.api_key {
+        config.system.api_key = Some(api_key);
+        info!("Master-issued API key provided at startup");
+    } else if config.system.api_key.is_some() {
+        warn!("Ignoring api_key from configuration file; provide --api-key at startup");
+        config.system.api_key = None;
+    } else {
+        info!("No API key provided at startup");
+    }
     info!(client_id = %config.system.client_id, "Configuration loaded");
 
     // Initialize shared state
@@ -75,8 +89,7 @@ async fn main() -> anyhow::Result<()> {
     let app = api::create_router(app_state.clone(), event_bus.clone(), config.clone());
 
     // Start HTTP server
-    let listener = tokio::net::TcpListener::bind(&config.http.listen_addr)
-        .await?;
+    let listener = tokio::net::TcpListener::bind(&config.http.listen_addr).await?;
     info!(addr = %config.http.listen_addr, "HTTP server listening");
 
     // Run server with graceful shutdown
@@ -86,6 +99,46 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Server shut down gracefully");
     Ok(())
+}
+
+/// Command-line arguments parsed for the client agent.
+struct CliArgs {
+    api_key: Option<String>,
+}
+
+impl CliArgs {
+    fn parse() -> anyhow::Result<Self> {
+        let mut api_key = None;
+        let mut args = env::args().skip(1);
+
+        while let Some(arg) = args.next() {
+            match arg.as_str() {
+                "--api-key" => {
+                    let value = args
+                        .next()
+                        .ok_or_else(|| anyhow!("--api-key requires a value"))?;
+                    api_key = Some(value);
+                }
+                "--help" | "-h" => {
+                    print_usage();
+                    process::exit(0);
+                }
+                "--version" | "-V" => {
+                    println!("pi-door-client {}", pi_door_client::VERSION);
+                    process::exit(0);
+                }
+                other => {
+                    return Err(anyhow!("Unknown argument: {other}"));
+                }
+            }
+        }
+
+        Ok(Self { api_key })
+    }
+}
+
+fn print_usage() {
+    println!("Usage: pi-door-client [--api-key <uuid>]");
 }
 
 /// Wait for shutdown signal

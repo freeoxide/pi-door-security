@@ -18,10 +18,9 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    /// Load configuration from file and environment
+    /// Load configuration from default paths
     pub fn load() -> anyhow::Result<Self> {
-        let config_path = std::env::var("PI_CLIENT_CONFIG")
-            .unwrap_or_else(|_| "/etc/pi-door-client/config.toml".to_string());
+        let config_path = "/etc/pi-door-client/config.toml";
 
         let settings = config::Config::builder()
             // Start with defaults
@@ -53,15 +52,7 @@ impl AppConfig {
             .set_default("rf433.allow_disarm", false)?
             .set_default("rf433.debounce_ms", 500)?
             // Try to load from file (may not exist)
-            .add_source(
-                config::File::with_name(&config_path)
-                    .required(false)
-            )
-            // Override with environment variables
-            .add_source(
-                config::Environment::with_prefix("PI_CLIENT")
-                    .separator("__")
-            )
+            .add_source(config::File::with_name(config_path).required(false))
             .build()?;
 
         let config: AppConfig = settings.try_deserialize()?;
@@ -74,6 +65,8 @@ pub struct SystemConfig {
     pub client_id: String,
     pub data_dir: PathBuf,
     pub log_level: String,
+    #[serde(default)]
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,6 +158,7 @@ impl AppConfig {
                 client_id: "test-client".to_string(),
                 data_dir: std::env::temp_dir().join("pi-door-test"),
                 log_level: "debug".to_string(),
+                api_key: None,
             },
             network: NetworkConfig::default(),
             http: HttpConfig {

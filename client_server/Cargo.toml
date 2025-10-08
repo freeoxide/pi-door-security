@@ -48,9 +48,6 @@ rppal = { version = "0.19", optional = true }
 # BLE (optional for now)
 # bluer = { version = "0.17", features = ["bluetoothd"], optional = true }
 
-# JWT authentication
-jsonwebtoken = "9.3"
-
 # Logging and tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "fmt"] }

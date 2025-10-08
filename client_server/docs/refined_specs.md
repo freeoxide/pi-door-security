@@ -24,7 +24,7 @@ Related: [master_server/src/main.rs](master_server/src/main.rs:1), [client_serve
 2. System context
 - Actors
   - Local user: Operator on the same LAN as the Pi.
-  - Cloud master: Master server receiving events and issuing commands to the client.
+- Cloud master: Master server receiving events, issuing commands, and generating the client API key distributed during provisioning.
   - BLE device: Phone or fob connected over Bluetooth Low Energy.
   - RF remote: 433MHz simple code remote for limited actions.
   - Hardware: Door magnetic reed switch input; GPIO relays for siren and floodlight.
@@ -57,7 +57,7 @@ graph TD
 4. Non-functional requirements
 - Availability: Target 99.9 percent for process uptime; automatic recovery on crash or hang.
 - Durability: Do not lose events while offline up to 7 days or 10k events, whichever comes first.
-- Security: TLS 1.3 to cloud; least-privilege local access; secrets stored root-only 600.
+- Security: TLS 1.3 to cloud; least-privilege local access; no persistent secrets on the client.
 
 5. Hardware platform and I and O mapping
 - Device: Raspberry Pi 4B 2 GB or higher, Raspberry Pi OS Lite 64-bit.
@@ -84,7 +84,7 @@ graph TD
   - Exponential backoff with full jitter: base 1 s, factor 2, max 60 s; reset after 60 s stable connection.
 
 Connectivity matrix
-- Local REST and WebSocket: Operate regardless of internet; subject to local auth.
+- Local REST and WebSocket: Operate regardless of internet; no authentication required on trusted LAN.
 - Cloud WebSocket: Requires internet; queues events offline and replays when online.
 - BLE: Operates regardless of internet.
 - RF: Operates regardless of internet.
@@ -158,7 +158,7 @@ Endpoints
   - Body: {"on":true,"duration_s":600}
   - 202 Accepted: {"actuators":{"floodlight":true},"duration_s":600}
 - GET /v1/config
-  - 200 OK: returns effective config with secrets redacted
+  - 200 OK: returns effective config
 - PUT /v1/config
   - Body: full or partial config; validated and persisted to disk; requires restart flag
   - 202 Accepted: {"applied":false,"restart_required":true}
@@ -186,7 +186,7 @@ Replies
 
 10. Cloud WebSocket protocol
 - Transport: wss to configured cloud url; TLS 1.3; server cert validated against system trust store with optional SPKI pin.
-- Auth: JWT Bearer token in Authorization header; token provisioned via config for v1; refresh prior to expiry.
+- Auth: none for v1; relies on mutually trusted network path (future enhancement: token-based auth if needed).
 - Heartbeats: client sends ping every 20 s; disconnect and reconnect on two missed heartbeats.
 - Backoff: exponential full jitter 1 s to 60 s; immediate reconnect on clean close code 1012 after 5 s.
 - Framing: JSON objects per message; all events and commands mirrored to cloud with additional metadata.
@@ -230,9 +230,9 @@ Cloud commands example
 - Locations and precedence
   - Built-in defaults
   - /etc/pi-door-client/config.toml
-  - Environment variables override selected keys
-- Secrets
-  - JWT stored in /etc/pi-door-client/secret.env owned by root mode 600
+- Credentials
+  - No secrets persisted on disk or via environment variables.
+  - Master server generates client API key and provides it as a runtime argument (`--api-key`) when launching the process; client treats it as in-memory only.
 
 Example config toml
 ```toml
@@ -288,20 +288,16 @@ mappings = [
 ]
 ```
 
-Environment variables
-- PI_CLIENT_JWT for cloud bearer
-- PI_CLIENT_CONFIG to override config path
-
 14. Security model
 - Cloud
   - TLS 1.3 required; disable TLS 1.0 to 1.2; validate hostname and cert chain; optional SPKI pinning.
-  - JWT bearer with exp less than or equal to 24 h; include claims iss aud sub client_id; reject tokens with clock skew greater than 60 s.
+  - No authentication tokens for v1; rely on mutually trusted infrastructure and TLS for confidentiality.
 - Local
-  - API key required by default; randomized 32 chars; transmitted in header X-API-Key only over LAN.
+  - No authentication by default; relies on trusted LAN access (future hardening optional via allowlisting).
   - LAN allowlist blocks non-rfc1918 subnets unless explicitly allowed.
   - CORS disabled by default.
-- Secrets storage
-  - root owned mode 600; never printed in logs; rotate by writing new file and sending SIGHUP.
+- Credential handling
+  - No secrets persisted on device; API key arguments stay in process memory only.
 - Hardening
   - Drop privileges to dedicated user pi-client after binding sockets.
   - Seccomp and capability reduction optional profile documented.
@@ -312,7 +308,7 @@ Environment variables
 - Health and readiness
   - /v1/health returns ready only after outputs initialized and event queue opened.
 - Time sync
-  - Requires NTP; failsafe tolerates clock drift up to plus or minus 60 s for JWT checks.
+  - Requires NTP; failsafe tolerates clock drift up to plus or minus 60 s for event timestamp validation.
 - Log management
   - Structured logs to journald; optional file sink with rotation to data_dir logs.
 - Storage resilience
@@ -328,8 +324,7 @@ Wants=network-online.target
 [Service]
 User=pi-client
 Group=pi-client
-ExecStart=/usr/local/bin/pi-door-client --config /etc/pi-door-client/config.toml
-EnvironmentFile=-/etc/pi-door-client/secret.env
+ExecStart=/usr/local/bin/pi-door-client --api-key 123e4567-e89b-12d3-a456-426614174000
 Restart=always
 RestartSec=2s
 WatchdogSec=30s
@@ -343,6 +338,8 @@ CapabilityBoundingSet=
 [Install]
 WantedBy=multi-user.target
 ```
+
+Provisioning must replace the placeholder UUID with the master-issued API key before enabling the service. The client never persists the key to disk.
 
 16. Observability
 - Logs: JSON lines with keys ts level msg component client_id state door connectivity.
@@ -368,7 +365,7 @@ Example log line
   - Internet flap test: while generating events, disconnect for 10 minutes then reconnect; 100 percent of events delivered in order.
   - Process kill test: kill minus nine; on restart fail-safe outputs off; state restored from persisted snapshot or defaults; no duplicate alarms.
 - Security
-  - Cloud connects only with TLS 1.3 and valid cert; JWT expiry enforced.
+- Cloud connects only with TLS 1.3 and valid cert; drop connection if certificate validation fails.
 
 19. Out of scope and future work
 - OTA updates with signed artifacts and rollback.
@@ -427,4 +424,3 @@ Assumptions and open items
 - BLE UUIDs are provisional and can be replaced with final namespace before implementation.
 - Local authentication and allowlisting are out of scope for MVP and may be added later if needed.
 - Radio remote disarm remains disabled by default and requires explicit enable with risk acceptance.
-

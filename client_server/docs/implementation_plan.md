@@ -36,7 +36,7 @@ graph TB
             BLE[BLE GATT Service<br/>BlueZ Integration]
             RF[RF433 Receiver<br/>Code Decoder]
             LocalAPI[Local HTTP/WS Server<br/>Axum Framework]
-            CloudWS[Cloud WebSocket Client<br/>TLS 1.3 + JWT]
+            CloudWS[Cloud WebSocket Client<br/>TLS 1.3]
         end
         
         subgraph "Processing Layer"
@@ -54,7 +54,7 @@ graph TB
         subgraph "Support Systems"
             Network[Network Manager<br/>Interface Selection]
             Health[Health Monitor<br/>Watchdog & Status]
-            Security[Security Module<br/>Auth & Secrets]
+            Security[Security Module<br/>Privilege Drop]
         end
     end
     
@@ -149,7 +149,6 @@ client_server/
 │   ├── cloud/
 │   │   ├── mod.rs              # Cloud WebSocket client
 │   │   ├── client.rs           # WS connection manager
-│   │   ├── auth.rs             # JWT handling
 │   │   └── reconnect.rs        # Backoff and retry logic
 │   │
 │   ├── ble/
@@ -169,7 +168,6 @@ client_server/
 │   │
 │   ├── security/
 │   │   ├── mod.rs              # Security utilities
-│   │   ├── secrets.rs          # Secret loading and handling
 │   │   └── privileges.rs       # Privilege dropping
 │   │
 │   ├── observability/
@@ -312,11 +310,11 @@ pub type DefaultGpio = RppalGpio;
 
 ### 4.4 Configuration Management
 
-**Decision**: Layered configuration with TOML base + env var overrides
+**Decision**: Built-in defaults with optional TOML override (no environment layer)
 
 **Rationale**:
 - TOML is human-readable and supports complex structures
-- Environment variables for secrets (12-factor app)
+- Eliminates environment variable handling to align with secret-free deployments
 - Validation at load time prevents runtime errors
 - Single source of truth via config struct
 
@@ -335,10 +333,9 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn load() -> Result<Self> {
-        // 1. Load from default
-        // 2. Override with /etc/pi-door-client/config.toml
-        // 3. Override with environment variables
-        // 4. Validate
+        // 1. Load defaults
+        // 2. Override with /etc/pi-door-client/config.toml when present
+        // 3. Validate
     }
 }
 ```
@@ -396,6 +393,21 @@ pub struct ApiError {
 }
 ```
 
+### 4.7 Credential Provisioning Flow
+
+**Decision**: Master server owns the API key lifecycle and supplies the key to the client process via startup argument.
+
+**Details**:
+- API key minted by the master server (UUID v4) during device enrollment.
+- Provisioning updates the systemd unit (or launch script) to embed the `--api-key <uuid>` argument before enabling the service.
+- The client keeps the key in memory only; it is never written to disk or exposed as an environment variable.
+- Local HTTP/WebSocket API stays unauthenticated; the API key is reserved for cloud/master coordination.
+
+**Implications**:
+- Removes client-side key generation responsibilities and auditing burden.
+- Centralizes rotation in the master server and simplifies fleet management.
+- Requires provisioning tooling to ensure the key is present before the service starts.
+
 ---
 
 ## 5. Technology Stack
@@ -434,9 +446,6 @@ bluer = { version = "0.17", features = ["bluetoothd"] }
 
 # RF433
 rppal-pud = { version = "0.3", optional = true }
-
-# JWT
-jsonwebtoken = "9.3"
 
 # Logging
 tracing = "0.1"
@@ -742,52 +751,17 @@ impl MockGpio {
 
 ## 9. Security Implementation
 
-### 9.1 Secret Management
+### 9.1 Credential Handling
 
 **Requirements**:
-- JWT stored in `/etc/pi-door-client/secret.env`
-- File permissions: root:root 600
-- Never logged or printed
-- Rotation via SIGHUP
+- No JWT or environment-based secrets.
+- Master-issued API key provided only via `--api-key <uuid>` at process startup.
+- Key remains in-memory; never written to disk or logs.
 
-**Implementation**:
-```rust
-pub struct SecretStore {
-    jwt: String,
-    last_loaded: Instant,
-}
-
-impl SecretStore {
-    pub fn load() -> Result<Self> {
-        let path = "/etc/pi-door-client/secret.env";
-        
-        // Check file permissions
-        let metadata = std::fs::metadata(path)?;
-        let permissions = metadata.permissions();
-        
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = permissions.mode() & 0o777;
-            if mode != 0o600 {
-                anyhow::bail!("Secret file must have 600 permissions");
-            }
-        }
-        
-        let jwt = std::fs::read_to_string(path)?
-            .lines()
-            .find(|l| l.starts_with("PI_CLIENT_JWT="))
-            .and_then(|l| l.split('=').nth(1))
-            .ok_or_else(|| anyhow::anyhow!("JWT not found in secret file"))?
-            .to_string();
-        
-        Ok(Self {
-            jwt,
-            last_loaded: Instant::now(),
-        })
-    }
-}
-```
+**Implementation Notes**:
+- CLI argument parsing captures the optional API key and stores it alongside runtime configuration.
+- Future integrations (cloud/WebSocket) consume the key directly from memory when needed.
+- Provisioning tooling updates the systemd unit or launch command with the correct argument prior to enabling the service.
 
 ### 9.2 Privilege Dropping
 
@@ -924,7 +898,7 @@ lazy_static! {
 ### Phase 5: Cloud Integration (Days 12-14)
 1. Implement event queue with sled
 2. Create cloud WebSocket client
-3. Add JWT authentication
+3. Confirm TLS handshake configuration (no application-layer auth for v1)
 4. Implement reconnection logic
 5. Test offline/online transitions
 
@@ -1002,7 +976,7 @@ lazy_static! {
 - [ ] Memory usage < 100MB under normal load
 - [ ] CPU usage < 5% idle, < 20% active
 - [ ] Test coverage > 80% for core modules
-- [ ] All secrets properly protected (600 permissions)
+- [ ] No credential persistence on disk
 
 ### 13.3 Acceptance Tests
 - [ ] Arm/disarm cycle via all input methods

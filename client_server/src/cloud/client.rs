@@ -1,4 +1,4 @@
-//! Cloud WebSocket client with TLS 1.3 and JWT authentication
+//! Cloud WebSocket client with TLS 1.3
 
 use crate::events::{EventBus, EventEnvelope};
 use anyhow::{Context, Result};
@@ -8,10 +8,7 @@ use std::time::Duration;
 use tokio::time::{interval, sleep};
 use tokio_tungstenite::{
     connect_async_tls_with_config,
-    tungstenite::{
-        client::IntoClientRequest,
-        protocol::Message,
-    },
+    tungstenite::{client::IntoClientRequest, protocol::Message},
 };
 use tracing::{debug, error, info, warn};
 
@@ -25,21 +22,14 @@ struct CloudMessage {
 
 pub struct CloudClient {
     url: String,
-    jwt: Option<String>,
     heartbeat_interval: Duration,
     event_bus: EventBus,
 }
 
 impl CloudClient {
-    pub fn new(
-        url: String,
-        jwt: Option<String>,
-        heartbeat_s: u64,
-        event_bus: EventBus,
-    ) -> Self {
+    pub fn new(url: String, heartbeat_s: u64, event_bus: EventBus) -> Self {
         Self {
             url,
-            jwt,
             heartbeat_interval: Duration::from_secs(heartbeat_s),
             event_bus,
         }
@@ -65,25 +55,13 @@ impl CloudClient {
     async fn connect_and_run(&self) -> Result<()> {
         info!(url = %self.url, "Connecting to cloud");
 
-        // Create request with Authorization header
-        let mut request = self.url.clone().into_client_request()?;
-        
-        if let Some(jwt) = &self.jwt {
-            request.headers_mut().insert(
-                "Authorization",
-                format!("Bearer {}", jwt).parse()?,
-            );
-        }
+        // Create request without additional authentication headers
+        let request = self.url.clone().into_client_request()?;
 
         // Connect with TLS
-        let (ws_stream, _) = connect_async_tls_with_config(
-            request,
-            None,
-            false,
-            None,
-        )
-        .await
-        .context("Failed to connect to cloud")?;
+        let (ws_stream, _) = connect_async_tls_with_config(request, None, false, None)
+            .await
+            .context("Failed to connect to cloud")?;
 
         info!("Connected to cloud successfully");
 
@@ -110,7 +88,7 @@ impl CloudClient {
                 Ok(envelope) = event_rx.recv() => {
                     let msg = self.envelope_to_message(&envelope);
                     let json = serde_json::to_string(&msg)?;
-                    
+
                     if let Err(e) = write.send(Message::Text(json)).await {
                         error!(error = %e, "Failed to send event to cloud");
                         return Err(e.into());
@@ -157,7 +135,7 @@ impl CloudClient {
 
     fn handle_cloud_message(&self, text: &str) -> Result<()> {
         let msg: CloudMessage = serde_json::from_str(text)?;
-        
+
         match msg.msg_type.as_str() {
             "cmd" => {
                 debug!("Received command from cloud");
@@ -171,7 +149,7 @@ impl CloudClient {
                 warn!(msg_type = %msg.msg_type, "Unknown message type from cloud");
             }
         }
-        
+
         Ok(())
     }
 }
@@ -183,17 +161,10 @@ mod tests {
     #[test]
     fn test_envelope_to_message() {
         let (bus, _) = EventBus::new();
-        let client = CloudClient::new(
-            "wss://example.com/client".to_string(),
-            Some("test-jwt".to_string()),
-            20,
-            bus,
-        );
+        let client = CloudClient::new("wss://example.com/client".to_string(), 20, bus);
 
-        let envelope = EventEnvelope::new(
-            crate::events::Event::DoorOpen,
-            "test-client".to_string(),
-        );
+        let envelope =
+            EventEnvelope::new(crate::events::Event::DoorOpen, "test-client".to_string());
 
         let msg = client.envelope_to_message(&envelope);
         assert_eq!(msg.msg_type, "event");

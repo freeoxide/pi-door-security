@@ -1,10 +1,6 @@
 //! Configuration management endpoints
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -57,8 +53,6 @@ pub struct CloudConfigView {
     pub backoff_max_s: u64,
     pub queue_max_events: usize,
     pub queue_max_age_days: u32,
-    #[serde(skip)]
-    _secret: String, // JWT token - never serialize (kept private)
 }
 
 #[derive(Serialize)]
@@ -98,12 +92,12 @@ pub struct ConfigUpdateRequest {
     config: Value,
 }
 
-/// GET /v1/config - Get current configuration with secrets redacted
+/// GET /v1/config - Get current configuration snapshot
 pub async fn get_config(
     State(ctx): State<Arc<ApiContext>>,
 ) -> Result<Json<ConfigResponse>, ApiError> {
     let config = &ctx.config;
-    
+
     let response = ConfigResponse {
         system: SystemConfigView {
             client_id: config.system.client_id.clone(),
@@ -128,7 +122,6 @@ pub async fn get_config(
             backoff_max_s: config.cloud.backoff_max_s,
             queue_max_events: config.cloud.queue_max_events,
             queue_max_age_days: config.cloud.queue_max_age_days,
-            _secret: String::new(), // Never return secrets
         },
         gpio: GpioConfigView {
             reed_in: config.gpio.reed_in,
@@ -154,7 +147,7 @@ pub async fn get_config(
             debounce_ms: config.rf433.debounce_ms,
         },
     };
-    
+
     Ok(Json(response))
 }
 
@@ -169,7 +162,7 @@ pub async fn update_config(
     // 2. Write to disk at /etc/pi-door-client/config.toml
     // 3. Mark restart as required
     // 4. Optionally trigger SIGHUP for hot-reload of certain configs
-    
+
     // For now, just validate it's valid JSON
     if request.config.is_null() {
         return Err(ApiError {
@@ -177,7 +170,7 @@ pub async fn update_config(
             status: StatusCode::BAD_REQUEST,
         });
     }
-    
+
     Ok((
         StatusCode::ACCEPTED,
         Json(json!({
@@ -185,7 +178,7 @@ pub async fn update_config(
             "restart_required": true,
             "message": "Configuration update received. Restart required to apply changes.",
             "note": "Configuration persistence requires write access to /etc/pi-door-client/config.toml"
-        }))
+        })),
     ))
 }
 
@@ -201,11 +194,15 @@ mod tests {
         let state = new_app_state();
         let (event_bus, _) = EventBus::new();
         let config = AppConfig::test_default();
-        let ctx = Arc::new(ApiContext { state, event_bus, config });
+        let ctx = Arc::new(ApiContext {
+            state,
+            event_bus,
+            config,
+        });
 
         let result = get_config(State(ctx)).await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap().0;
         assert!(!response.system.client_id.is_empty());
         assert_eq!(response.system.client_id, "test-client");
@@ -217,7 +214,11 @@ mod tests {
         let state = new_app_state();
         let (event_bus, _) = EventBus::new();
         let config = AppConfig::test_default();
-        let ctx = Arc::new(ApiContext { state, event_bus, config });
+        let ctx = Arc::new(ApiContext {
+            state,
+            event_bus,
+            config,
+        });
 
         let request = ConfigUpdateRequest {
             config: json!({"timers": {"exit_delay_s": 45}}),
@@ -225,7 +226,7 @@ mod tests {
 
         let result = update_config(State(ctx), Json(request)).await;
         assert!(result.is_ok());
-        
+
         let (status, json) = result.unwrap();
         assert_eq!(status, StatusCode::ACCEPTED);
         assert_eq!(json["restart_required"], true);

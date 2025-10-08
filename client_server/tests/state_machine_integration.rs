@@ -127,11 +127,11 @@ async fn test_disarm_during_entry_delay() {
     sleep(Duration::from_millis(100)).await;
     assert_eq!(state.read().alarm_state, AlarmState::EntryDelay);
 
-    // Disarm before entry delay expires
+    // Disarm before entry delay expires (with auto-rearm disabled)
     event_bus
         .emit(Event::UserDisarm {
             source: EventSource::Local,
-            auto_rearm_s: None,
+            auto_rearm_s: Some(0), // Disable auto-rearm
         })
         .unwrap();
     sleep(Duration::from_millis(200)).await;

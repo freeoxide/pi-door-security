@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_emergency_shutdown() {
-        let mut gpio = MockGpio::new();
+        let gpio = MockGpio::new();
         
         // Set some outputs
         {

@@ -72,6 +72,7 @@ pub async fn ble_pairing(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::AppConfig;
     use crate::events::EventBus;
     use crate::state::new_app_state;
 
@@ -79,7 +80,8 @@ mod tests {
     async fn test_enable_ble_pairing() {
         let state = new_app_state();
         let (event_bus, _) = EventBus::new();
-        let ctx = Arc::new(ApiContext { state, event_bus });
+        let config = AppConfig::test_default();
+        let ctx = Arc::new(ApiContext { state, event_bus, config });
 
         let request = BlePairingRequest {
             enable: true,
@@ -99,7 +101,8 @@ mod tests {
     async fn test_disable_ble_pairing() {
         let state = new_app_state();
         let (event_bus, _) = EventBus::new();
-        let ctx = Arc::new(ApiContext { state, event_bus });
+        let config = AppConfig::test_default();
+        let ctx = Arc::new(ApiContext { state, event_bus, config });
 
         let request = BlePairingRequest {
             enable: false,

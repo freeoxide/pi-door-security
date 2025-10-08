@@ -189,7 +189,7 @@ mod tests {
     fn test_shared_state_add_event() {
         let mut state = SharedState::new();
         
-        for i in 0..60 {
+        for _i in 0..60 {
             let envelope = EventEnvelope::new(
                 crate::events::Event::DoorOpen,
                 "test".to_string()

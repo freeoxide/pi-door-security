@@ -107,6 +107,7 @@ pub async fn control_floodlight(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::AppConfig;
     use crate::events::EventBus;
     use crate::state::new_app_state;
 
@@ -114,9 +115,11 @@ mod tests {
     async fn test_siren_control() {
         let state = new_app_state();
         let (event_bus, _rx) = EventBus::new();
+        let config = AppConfig::test_default();
         let ctx = Arc::new(ApiContext {
             state,
             event_bus,
+            config,
         });
 
         let req = SirenRequest {
@@ -135,9 +138,11 @@ mod tests {
     async fn test_floodlight_control() {
         let state = new_app_state();
         let (event_bus, _rx) = EventBus::new();
+        let config = AppConfig::test_default();
         let ctx = Arc::new(ApiContext {
             state,
             event_bus,
+            config,
         });
 
         let req = FloodlightRequest {

@@ -156,3 +156,54 @@ impl Default for NetworkConfig {
         }
     }
 }
+
+impl AppConfig {
+    /// Create a default test configuration
+    pub fn test_default() -> Self {
+        Self {
+            system: SystemConfig {
+                client_id: "test-client".to_string(),
+                data_dir: std::env::temp_dir().join("pi-door-test"),
+                log_level: "debug".to_string(),
+            },
+            network: NetworkConfig::default(),
+            http: HttpConfig {
+                listen_addr: "127.0.0.1:0".to_string(),
+            },
+            ws_local: WsLocalConfig { enabled: true },
+            cloud: CloudConfig {
+                url: None,
+                spki_pins: vec![],
+                heartbeat_s: 20,
+                backoff_min_s: 1,
+                backoff_max_s: 60,
+                queue_max_events: 10000,
+                queue_max_age_days: 7,
+            },
+            gpio: GpioConfig {
+                reed_in: 17,
+                reed_active_low: true,
+                siren_out: 27,
+                floodlight_out: 22,
+                radio433_rx_in: 23,
+                debounce_ms: 50,
+            },
+            timers: TimerConfig {
+                exit_delay_s: 30,
+                entry_delay_s: 30,
+                auto_rearm_s: 120,
+                siren_max_s: 120,
+            },
+            ble: BleConfig {
+                enabled: true,
+                pairing_window_s: 120,
+            },
+            rf433: Rf433Config {
+                enabled: true,
+                allow_disarm: false,
+                debounce_ms: 500,
+                mappings: vec![],
+            },
+        }
+    }
+}

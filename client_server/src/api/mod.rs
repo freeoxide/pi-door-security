@@ -7,6 +7,7 @@ mod error;
 pub use models::*;
 pub use error::*;
 
+use crate::config::AppConfig;
 use crate::events::EventBus;
 use crate::state::AppState;
 use axum::{
@@ -16,8 +17,8 @@ use axum::{
 use std::sync::Arc;
 
 /// Create the API router
-pub fn create_router(state: AppState, event_bus: EventBus) -> Router {
-    let ctx = Arc::new(ApiContext { state, event_bus });
+pub fn create_router(state: AppState, event_bus: EventBus, config: AppConfig) -> Router {
+    let ctx = Arc::new(ApiContext { state, event_bus, config });
     
     Router::new()
         // Health and status
@@ -43,4 +44,5 @@ pub fn create_router(state: AppState, event_bus: EventBus) -> Router {
 pub struct ApiContext {
     pub state: AppState,
     pub event_bus: EventBus,
+    pub config: AppConfig,
 }

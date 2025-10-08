@@ -90,6 +90,7 @@ pub async fn disarm(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::AppConfig;
     use crate::events::EventBus;
     use crate::state::new_app_state;
 
@@ -97,9 +98,11 @@ mod tests {
     async fn test_arm_handler() {
         let state = new_app_state();
         let (event_bus, _rx) = EventBus::new();
+        let config = AppConfig::test_default();
         let ctx = Arc::new(ApiContext {
             state,
             event_bus,
+            config,
         });
 
         let req = ArmRequest {
@@ -119,9 +122,11 @@ mod tests {
     async fn test_disarm_handler() {
         let state = new_app_state();
         let (event_bus, _rx) = EventBus::new();
+        let config = AppConfig::test_default();
         let ctx = Arc::new(ApiContext {
             state,
             event_bus,
+            config,
         });
 
         let req = DisarmRequest {

@@ -2,9 +2,9 @@
 
 use pi_door_client::{
     api,
-    config::TimerConfig,
+    config::AppConfig,
     events::EventBus,
-    state::new_app_state,
+    state::{new_app_state, StateMachine},
 };
 use reqwest;
 use serde_json::json;
@@ -13,9 +13,23 @@ use tokio::time::sleep;
 
 async fn start_test_server() -> (String, tokio::task::JoinHandle<()>) {
     let state = new_app_state();
-    let (event_bus, _) = EventBus::new();
+    let (event_bus, mut event_rx) = EventBus::new();
+    let config = AppConfig::test_default();
     
-    let app = api::create_router(state, event_bus);
+    // Spawn state machine to process events
+    let mut state_machine = StateMachine::new(
+        state.clone(),
+        event_bus.clone(),
+        config.timers.clone(),
+        config.system.client_id.clone(),
+    );
+    tokio::spawn(async move {
+        while let Some(event) = event_rx.recv().await {
+            let _ = state_machine.process_event(event).await;
+        }
+    });
+    
+    let app = api::create_router(state, event_bus, config);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .unwrap();

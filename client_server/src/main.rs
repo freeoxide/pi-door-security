@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // Create HTTP API router
-    let app = api::create_router(app_state.clone(), event_bus.clone());
+    let app = api::create_router(app_state.clone(), event_bus.clone(), config.clone());
 
     // Start HTTP server
     let listener = tokio::net::TcpListener::bind(&config.http.listen_addr)

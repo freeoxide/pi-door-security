@@ -45,8 +45,8 @@ pub async fn verify_session(db: &DatabaseConnection, token: &str) -> Result<Opti
         .await?;
 
     if let Some(session) = session {
-        let now = Utc::now();
-        if session.expires_at.and_utc() > now {
+        let now: chrono::DateTime<chrono::FixedOffset> = Utc::now().into();
+        if session.expires_at > now {
             return Ok(Some(session.user_id));
         }
     }

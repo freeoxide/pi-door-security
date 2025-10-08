@@ -5,6 +5,7 @@ use axum::{
     routing::{delete, get, patch, post, Router},
     Extension, Json,
 };
+use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -68,12 +69,18 @@ async fn create_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
             )
         })?;
 
     if existing.is_some() {
         return Err((
             StatusCode::CONFLICT,
+            Json(ErrorResponse {
+                error: "Username already exists".to_string(),
+            }),
         ));
     }
 
@@ -81,21 +88,29 @@ async fn create_user(
     let password_hash = auth::hash_password(&req.password).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Password hashing failed".to_string(),
+            }),
         )
     })?;
 
     // Create user
     let user = users::ActiveModel {
+        id: Set(Uuid::new_v4()),
         username: Set(req.username),
         password_hash: Set(password_hash),
         role: Set(req.role),
         otp_secret: Set(None),
         otp_enabled: Set(false),
+        created_at: Set(Utc::now().into()),
     };
 
     let user = user.insert(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to create user".to_string(),
+            }),
         )
     })?;
 
@@ -109,6 +124,9 @@ async fn list_users(
     let users = Users::find().all(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
         )
     })?;
 
@@ -127,10 +145,16 @@ async fn update_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
             )
         })?
         .ok_or((
             StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
         ))?;
 
     let mut user: users::ActiveModel = user.into();
@@ -143,6 +167,9 @@ async fn update_user(
         let password_hash = auth::hash_password(&password).map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Password hashing failed".to_string(),
+                }),
             )
         })?;
         user.password_hash = Set(password_hash);
@@ -155,6 +182,9 @@ async fn update_user(
     let user = user.update(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to update user".to_string(),
+            }),
         )
     })?;
 
@@ -172,16 +202,25 @@ async fn delete_user(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
             )
         })?
         .ok_or((
             StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
         ))?;
 
     let user: users::ActiveModel = user.into();
     user.delete(&state.db).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to delete user".to_string(),
+            }),
         )
     })?;
 

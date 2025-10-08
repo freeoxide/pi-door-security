@@ -482,14 +482,12 @@ pub fn router() -> Router<AppState> {
         .route(
             "/",
             post(create_client)
-                .get(list_clients)
-                ,
+                .get(list_clients),
         )
         .route(
             "/:id",
             get(get_client)
-                .delete(delete_client)
-                ,
+                .delete(delete_client),
         )
         .route(
             "/:id/network",
@@ -503,5 +501,4 @@ pub fn router() -> Router<AppState> {
             "/:id/assign/:user_id",
             delete(unassign_user),
         )
-        .route_layer(middleware::from_fn(crate::auth::middleware::require_auth))
 }

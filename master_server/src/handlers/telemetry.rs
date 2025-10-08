@@ -2,7 +2,7 @@ use axum::{  extract::{Path, Query, State},  http::StatusCode,  middleware,
     routing::{get, post, Router},
     Extension, Json,
 };
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -211,18 +211,28 @@ async fn list_events(
         q = q.filter(events::Column::Level.eq(level_enum));
     }
 
-    if let Some(limit) = query.limit {
-        q = q.limit(limit);
-    }
-
-    let events = q.all(&state.db).await.map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
+    let events = if let Some(limit) = query.limit {
+        q.paginate(&state.db, limit as u64)
+            .fetch_page(0)
+            .await
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Error".to_string(),
+                    }),
+                )
+            })?
+    } else {
+        q.all(&state.db).await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
                     error: "Error".to_string(),
                 }),
             )
-        })?;
+        })?
+    };
 
     Ok(Json(events.into_iter().map(|e| e.into()).collect()))
 }

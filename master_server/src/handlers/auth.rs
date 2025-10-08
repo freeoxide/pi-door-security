@@ -212,7 +212,7 @@ async fn otp_verify(
             }),
         ))?;
 
-    let otp_secret = user.otp_secret.ok_or((
+    let otp_secret = user.otp_secret.clone().ok_or((
         StatusCode::BAD_REQUEST,
         Json(ErrorResponse {
             error: "OTP not set up".to_string(),
